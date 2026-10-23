@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Ticket Analytics</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --bg-light: #f4f6f9;
+            --white: #ffffff;
+            --border: #e0e0e0;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f1c40f;
+        }
+
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; background-color: var(--bg-light); overflow: hidden; }
+
+        /* SIDEBAR */
+        .sidebar { width: 250px; background-color: var(--primary); color: var(--white); display: flex; flex-direction: column; padding: 20px 0; flex-shrink: 0; }
+        .logo { font-size: 20px; font-weight: bold; text-align: center; margin-bottom: 30px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px; }
+        .menu-item { padding: 15px 25px; cursor: pointer; display: flex; align-items: center; color: var(--white); text-decoration: none; opacity: 0.8; }
+        .menu-item:hover { background-color: rgba(255,255,255,0.1); opacity: 1; }
+        .menu-item.active { background-color: rgba(255,255,255,0.1); border-left: 4px solid var(--secondary); opacity: 1; }
+
+        /* MAIN CONTENT */
+        .main-content { flex: 1; display: flex; flex-direction: column; padding: 30px; overflow-y: auto; }
+        
+        .header { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 15px; }
+        .header h2 { margin: 0; color: #2c3e50; }
+
+        /* FILTER BAR */
+        .filter-bar { 
+            background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+            display: flex; gap: 20px; align-items: flex-end; margin-bottom: 30px; flex-wrap: wrap;
+        }
+        
+        .filter-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 150px; }
+        .filter-group label { font-size: 13px; font-weight: bold; color: #7f8c8d; }
+        .filter-group input, .filter-group select { 
+            padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 100%; box-sizing: border-box;
+        }
+
+        .btn-filter { 
+            background-color: var(--secondary); color: white; border: none; padding: 10px 25px; 
+            border-radius: 4px; font-weight: bold; cursor: pointer; height: 40px; 
+        }
+        .btn-filter:hover { background-color: #2980b9; }
+
+        /* EMPLOYEE CARDS */
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-bottom: 40px;}
+
+        .emp-card { 
+            background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: transform 0.2s; cursor: pointer; border: 2px solid transparent; position: relative; overflow: hidden;
+        }
+        .emp-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); border-color: var(--secondary); }
+        .emp-card.selected { border-color: var(--secondary); background: #f8fbff; }
+
+        .emp-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+        .emp-avatar { 
+            width: 50px; height: 50px; background: var(--bg-light); border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; color: var(--secondary); border: 1px solid #ddd;
+        }
+        .emp-info h3 { margin: 0; font-size: 18px; color: #333; }
+        .emp-info span { font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 1px; }
+
+        .count-badge { 
+            position: absolute; top: 20px; right: 20px; font-size: 24px; font-weight: bold; color: var(--primary);
+        }
+
+        .stats-mini { display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; }
+        .sm-item { text-align: center; flex: 1; }
+        .sm-val { display: block; font-weight: bold; font-size: 14px; }
+        .sm-lbl { font-size: 10px; color: #888; text-transform: uppercase; }
+
+        .text-success { color: var(--success); }
+        .text-danger { color: var(--danger); }
+        .text-warning { color: var(--warning); }
+
+        /* DRILL DOWN TABLE */
+        .drilldown-container { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); display: none; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; }
+        th { background: #f8f9fa; color: #555; font-weight: 600; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; color: white; font-weight: bold; }
+        
+        .b-closed { background: var(--success); }
+        .b-process { background: var(--secondary); }
+        .b-pending { background: var(--warning); }
+        .b-overdue { background: var(--danger); }
+
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar">
+        <div class="logo">Unified System</div>
+        <div class="menu-item" onclick="window.location.href='TicketDashboard.html'">🎫 Ticket Dashboard</div>
+        <div class="menu-item" onclick="window.location.href='Reports.html'">📊 Client Reports</div>
+        <div class="menu-item active">👥 Employee Reports</div>
+    </nav>
+
+    <main class="main-content">
+        <div class="header">
+            <h2>Employee Ticket Allocation</h2>
+        </div>
+
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Date From</label>
+                <input type="date" id="date-from">
+            </div>
+            <div class="filter-group">
+                <label>Date To</label>
+                <input type="date" id="date-to">
+            </div>
+            <div class="filter-group">
+                <label>Specific Employee</label>
+                <select id="emp-select">
+                    <option value="All">Show All Employees</option>
+                    <option value="John Doe">John Doe</option>
+                    <option value="Sarah Smith">Sarah Smith</option>
+                    <option value="Mike Ross">Mike Ross</option>
+                    <option value="Unassigned">Unassigned</option>
+                </select>
+            </div>
+            <button class="btn-filter" onclick="generateReport()">Filter Results</button>
+        </div>
+
+        <div id="cards-area" class="cards-grid">
+            </div>
+
+        <div id="drill-down" class="drilldown-container">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; color:#2c3e50;">Tickets Assigned to: <span id="dd-name" style="color:var(--secondary);">--</span></h3>
+                <button onclick="closeDrillDown()" style="background:#eee; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;">Close List ✖</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Date</th>
+                        <th>Subject</th>
+                        <th>Client</th>
+                        <th>Mobile</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="dd-body"></tbody>
+            </table>
+        </div>
+
+    </main>
+
+    <script>
+        // --- SAMPLE TICKET DATA ---
+        const ticketData = [
+            { id: 101, employee: 'John Doe', date: '2025-01-10', status: 'Closed', subject: 'Password Reset', client: 'Acme Corp', mobile: '07701234567' },
+            { id: 102, employee: 'John Doe', date: '2025-01-12', status: 'In Process', subject: 'Server Config', client: 'Tech Ltd', mobile: '07505556666' },
+            { id: 103, employee: 'John Doe', date: '2025-01-15', status: 'Closed', subject: 'Email Sync', client: 'Alpha Co', mobile: '07809998888' },
+            { id: 104, employee: 'John Doe', date: '2025-01-20', status: 'Overdue', subject: 'Firewall Issue', client: 'Beta LLC', mobile: '07901112222' },
+            
+            { id: 201, employee: 'Sarah Smith', date: '2025-01-11', status: 'Closed', subject: 'Billing Error', client: 'Finance Bros', mobile: '07703334444' },
+            { id: 202, employee: 'Sarah Smith', date: '2025-01-18', status: 'In Process', subject: 'Refund Req', client: 'Shopify Store', mobile: '07507771111' },
+            { id: 203, employee: 'Sarah Smith', date: '2025-01-25', status: 'Closed', subject: 'Invoice Update', client: 'Finance Bros', mobile: '07702223333' },
+            
+            { id: 301, employee: 'Mike Ross', date: '2025-01-05', status: 'Closed', subject: 'Hardware Fix', client: 'Logistics Co', mobile: '07905554444' },
+            { id: 302, employee: 'Mike Ross', date: '2025-01-28', status: 'Pending', subject: 'Printer Setup', client: 'Office Space', mobile: '07806667777' },
+
+            { id: 401, employee: 'Unassigned', date: '2025-02-06', status: 'New', subject: 'General Inquiry', client: 'Walk-in', mobile: '07500000000' }
+        ];
+
+        // Init Dates
+        document.getElementById('date-from').value = '2025-01-01';
+        document.getElementById('date-to').value = '2025-12-31';
+
+        // Run on load
+        window.onload = generateReport;
+
+        function generateReport() {
+            const dFrom = document.getElementById('date-from').value;
+            const dTo = document.getElementById('date-to').value;
+            const empFilter = document.getElementById('emp-select').value;
+
+            // 1. Filter Tickets
+            const filtered = ticketData.filter(t => {
+                if(dFrom && t.date < dFrom) return false;
+                if(dTo && t.date > dTo) return false;
+                if(empFilter !== 'All' && t.employee !== empFilter) return false;
+                return true;
+            });
+
+            // 2. Group by Employee
+            const empStats = {}; 
+
+            filtered.forEach(t => {
+                if(!empStats[t.employee]) {
+                    empStats[t.employee] = { 
+                        name: t.employee, 
+                        total: 0, 
+                        closed: 0, 
+                        open: 0, 
+                        overdue: 0,
+                        tickets: [] 
+                    };
+                }
+                
+                const stat = empStats[t.employee];
+                stat.total++;
+                stat.tickets.push(t);
+
+                if(t.status === 'Closed') stat.closed++;
+                else if(t.status === 'Overdue') stat.overdue++;
+                else stat.open++;
+            });
+
+            // 3. Render Cards
+            renderCards(empStats);
+            closeDrillDown();
+        }
+
+        function renderCards(empStats) {
+            const container = document.getElementById('cards-area');
+            container.innerHTML = '';
+
+            if(Object.keys(empStats).length === 0) {
+                container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#999;">No tickets found.</div>';
+                return;
+            }
+
+            for(let key in empStats) {
+                const emp = empStats[key];
+                
+                // Create Card HTML
+                const div = document.createElement('div');
+                div.className = 'emp-card';
+                div.onclick = () => showTickets(emp, div);
+
+                const initials = emp.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
+
+                div.innerHTML = `
+                    <div class="count-badge">${emp.total}</div>
+                    <div class="emp-header">
+                        <div class="emp-avatar">${initials}</div>
+                        <div class="emp-info">
+                            <h3>${emp.name}</h3>
+                            <span>${emp.total} Tickets Assigned</span>
+                        </div>
+                    </div>
+                    <div class="stats-mini">
+                        <div class="sm-item text-success">
+                            <span class="sm-val">${emp.closed}</span>
+                            <span class="sm-lbl">Closed</span>
+                        </div>
+                        <div class="sm-item text-warning">
+                            <span class="sm-val">${emp.open}</span>
+                            <span class="sm-lbl">Open</span>
+                        </div>
+                        <div class="sm-item text-danger">
+                            <span class="sm-val">${emp.overdue}</span>
+                            <span class="sm-lbl">Overdue</span>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        function showTickets(emp, cardElem) {
+            // Highlight selected card
+            document.querySelectorAll('.emp-card').forEach(c => c.classList.remove('selected'));
+            cardElem.classList.add('selected');
+
+            // Populate Table
+            const tbody = document.getElementById('dd-body');
+            tbody.innerHTML = '';
+            document.getElementById('dd-name').innerText = emp.name;
+
+            emp.tickets.forEach(t => {
+                let badgeClass = 'b-process';
+                if(t.status === 'Closed') badgeClass = 'b-closed';
+                else if(t.status === 'Overdue') badgeClass = 'b-overdue';
+                else if(t.status === 'Pending') badgeClass = 'b-pending';
+
+                const row = `
+                    <tr>
+                        <td>#${t.id}</td>
+                        <td>${t.date}</td>
+                        <td>${t.subject}</td>
+                        <td>${t.client}</td>
+                        <td>${t.mobile}</td>
+                        <td><span class="badge ${badgeClass}">${t.status}</span></td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+
+            // Show Section
+            document.getElementById('drill-down').style.display = 'block';
+            document.getElementById('drill-down').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function closeDrillDown() {
+            document.getElementById('drill-down').style.display = 'none';
+            document.querySelectorAll('.emp-card').forEach(c => c.classList.remove('selected'));
+        }
+    </script>
+</body>
+</html>
